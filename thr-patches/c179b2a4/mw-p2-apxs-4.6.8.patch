@@ -1,0 +1,31 @@
+From: ActiveState <dev@activestate.com>
+Subject: [PATCH] Hack apxs calls for paths
+
+diff --git a/setup.py b/setup.py
+index 8451545..63f2d62 100644
+--- a/setup.py
++++ b/setup.py
+@@ -363,6 +363,10 @@ SHLIBPATH_VAR = get_apxs_config('SHLIBPATH_VAR')
+ APXS_CONFIG_TEMPLATE = """
+ import os
+ 
++def get_rootdir():
++    import sys
++    return "/".join(sys.executable.split("/")[0:-3])
++
+ WITH_TARBALL_PACKAGE = %(WITH_TARBALL_PACKAGE)r
+ WITH_HTTPD_PACKAGE = %(WITH_HTTPD_PACKAGE)r
+ 
+@@ -384,9 +388,9 @@ elif WITH_TARBALL_PACKAGE:
+     SHLIBPATH.append(os.path.join(PACKAGES_ROOTDIR, 'apr', 'lib'))
+     SHLIBPATH = ':'.join(SHLIBPATH)
+ else:
+-    BINDIR = '%(BINDIR)s'
+-    SBINDIR = '%(SBINDIR)s'
+-    LIBEXECDIR = '%(LIBEXECDIR)s'
++    BINDIR = get_rootdir() + '%(BINDIR)s'
++    SBINDIR = get_rootdir() + '%(SBINDIR)s'
++    LIBEXECDIR = get_rootdir() + '%(LIBEXECDIR)s'
+     SHLIBPATH = ''
+ 
+ MPM_NAME = '%(MPM_NAME)s'

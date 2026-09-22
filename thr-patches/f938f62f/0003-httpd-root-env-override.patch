@@ -1,0 +1,23 @@
+--- a/setup.py
++++ b/setup.py
+@@ -300,7 +300,10 @@
+             out = out.decode('UTF-8')
+         return out.strip()
+ 
+-INCLUDEDIR = get_apxs_config('INCLUDEDIR')
++if 'MOD_WSGI_HTTPD_ROOT' in os.environ:
++    INCLUDEDIR = os.environ['MOD_WSGI_HTTPD_ROOT'] + get_apxs_config('INCLUDEDIR')
++else:
++    INCLUDEDIR = get_apxs_config('INCLUDEDIR')
+ CPPFLAGS = get_apxs_config('CPPFLAGS').split()
+ CFLAGS = get_apxs_config('CFLAGS').split()
+ 
+@@ -366,6 +369,8 @@
+ import os
+ 
+ def get_rootdir():
++    if "MOD_WSGI_HTTPD_ROOT" in os.environ:
++        return os.environ["MOD_WSGI_HTTPD_ROOT"]
+     import sys
+     return "/".join(sys.executable.split("/")[0:-3])
+ 
