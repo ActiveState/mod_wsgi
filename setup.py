@@ -125,6 +125,22 @@ if APXS is None:
     if APXS is not None:
         WITH_HTTPD_PACKAGE = True
 
+# ActiveState: when no apxs was named or found next to the interpreter but the
+# mod_wsgi-httpd package is importable, for example from PYTHONPATH in a build
+# sandbox where its mod_wsgi-apxs script was never installed, read the Apache
+# configuration from that package in-process. This gives the same answers as
+# running its mod_wsgi-apxs script.
+
+HTTPD_PACKAGE_APXS = None
+
+if APXS is None:
+    try:
+        from mod_wsgi_packages.apxs import __main__ as HTTPD_PACKAGE_APXS
+    except ImportError:
+        HTTPD_PACKAGE_APXS = None
+    else:
+        WITH_HTTPD_PACKAGE = True
+
 if APXS is None:
     APXS = find_program(['mod_wsgi-apxs', 'apxs2', 'apxs'],
             'apxs', ['/usr/sbin', os.getcwd()])
@@ -135,7 +151,7 @@ WITHOUT_APXS = False
 WITH_WINDOWS_APACHE = None
 WITH_MACOSX_APACHE = None
 
-if not WITH_TARBALL_PACKAGE:
+if not WITH_TARBALL_PACKAGE and HTTPD_PACKAGE_APXS is None:
     if not os.path.isabs(APXS) or not os.access(APXS, os.X_OK):
         WITHOUT_APXS = True
 
@@ -167,7 +183,20 @@ if WITHOUT_APXS and not WITH_WINDOWS_APACHE and not WITH_MACOSX_APACHE:
             'in the documentation for this package and install any '
             'missing Apache httpd server packages.' % APXS)
 
-if WITH_WINDOWS_APACHE:
+if HTTPD_PACKAGE_APXS is not None:
+    def get_apxs_config(name):
+        return HTTPD_PACKAGE_APXS.get_vars(name)
+
+    # The package installs the APR and APR-util headers under its own
+    # include directory, which EXTRA_INCLUDES already names.
+
+    def get_apr_includes():
+        return ''
+
+    def get_apu_includes():
+        return ''
+
+elif WITH_WINDOWS_APACHE:
     def get_apxs_config(name):
         if name == 'INCLUDEDIR':
             return WITH_WINDOWS_APACHE + '/include'
@@ -366,8 +395,16 @@ import os
 WITH_TARBALL_PACKAGE = %(WITH_TARBALL_PACKAGE)r
 WITH_HTTPD_PACKAGE = %(WITH_HTTPD_PACKAGE)r
 
-if WITH_HTTPD_PACKAGE:
+# ActiveState: use the Apache from the mod_wsgi-httpd package whenever that
+# package is installed, whichever Apache this module was compiled against.
+# Without it, fall back to the Apache recorded at build time below.
+
+try:
     from mod_wsgi_packages.httpd import __file__ as PACKAGES_ROOTDIR
+except ImportError:
+    PACKAGES_ROOTDIR = None
+
+if PACKAGES_ROOTDIR is not None:
     PACKAGES_ROOTDIR = os.path.dirname(PACKAGES_ROOTDIR)
     BINDIR = os.path.join(PACKAGES_ROOTDIR, 'bin')
     SBINDIR = BINDIR
